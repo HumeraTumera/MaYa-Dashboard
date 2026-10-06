@@ -318,7 +318,7 @@
             <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Search master stock list by company name or ticker symbol:</p>
             
             <div class="autocomplete-container">
-                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. Reliance, Kotak)..." autocomplete="off">
+                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. Reliance, HPCL)..." autocomplete="off">
                 <div id="modal-autocomplete-list" class="autocomplete-items"></div>
             </div>
             <button class="action-btn" style="width: 100%; margin-bottom: 12px; background: #238636;" onclick="addStockToEditingWatchlist()">+ Add Selected Stock</button>
@@ -354,15 +354,15 @@
     <div id="master-list-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 class="modal-title">Master Stock List Upload</h3>
-            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 15px;">Upload official CSV lists for NSE and BSE to update the unified master database.</p>
+            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 15px;">Upload NSE or BSE CSV lists (upload either one or both) to update the unified master database.</p>
             
             <div style="margin-bottom: 15px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
-                <label style="display: block; font-size: 0.85em; font-weight: bold; color: var(--strong-text); margin-bottom: 5px;">(1) Upload NSE Listed Stocks CSV:</label>
+                <label style="display: block; font-size: 0.85em; font-weight: bold; color: var(--strong-text); margin-bottom: 5px;">Upload NSE Listed Stocks CSV (Optional):</label>
                 <input type="file" id="nse-file-upload" accept=".csv" style="font-size: 0.85em; color: var(--text);">
             </div>
 
             <div style="margin-bottom: 15px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
-                <label style="display: block; font-size: 0.85em; font-weight: bold; color: var(--strong-text); margin-bottom: 5px;">(2) Upload BSE Listed Stocks CSV:</label>
+                <label style="display: block; font-size: 0.85em; font-weight: bold; color: var(--strong-text); margin-bottom: 5px;">Upload BSE Listed Stocks CSV (Optional):</label>
                 <input type="file" id="bse-file-upload" accept=".csv" style="font-size: 0.85em; color: var(--text);">
             </div>
 
@@ -444,7 +444,7 @@
     </div>
 
     <footer>
-        Last Price Stream: <strong id="last-updated">--</strong> | Next real-time tick in: <strong id="next-update" style="color: var(--blue);">1</strong> second<br>
+        Prices updated at: <strong id="last-updated">--</strong> | Next refresh in: <strong id="next-update" style="color: var(--blue);">1</strong>s<br>
         <i>Cloud automated multi-watchlist live streaming active.</i>
         <span class="author">Created by MaYa</span>
     </footer>
@@ -458,11 +458,11 @@
                 themeBtn.innerText = '🌙 Dark Mode';
             } else {
                 htmlTag.setAttribute('data-theme', 'dark');
-                themeBtn.innerText = '☀️️ Light Mode';
+                themeBtn.innerText = '☀️ Light Mode';
             }
         });
 
-        // Default robust fallback master database with exchange tags ('NSE', 'BSE', 'Both')
+        // Default robust fallback master database
         let masterEquityDB = [
             { name: "Reliance Industries Limited", ticker: "RELIANCE", exchange: "Both" },
             { name: "Tata Consultancy Services Limited", ticker: "TCS", exchange: "Both" },
@@ -479,7 +479,6 @@
             { name: "Hindustan Petroleum Corporation Limited", ticker: "HPCL", exchange: "Both" }
         ];
 
-        // Load custom uploaded master database from localStorage if available
         let savedMaster = localStorage.getItem('maya_master_equity_db');
         if (savedMaster) {
             try { masterEquityDB = JSON.parse(savedMaster); } catch(e){}
@@ -491,7 +490,6 @@
         let storedWl = JSON.parse(localStorage.getItem('maya_watchlists_card1'));
         let watchlists = storedWl && storedWl.length > 0 ? storedWl : [];
         
-        // Ensure Watchlist 0 is always "All Stocks"
         let allStocksList = masterEquityDB.map(s => ({ name: s.name, ticker: s.ticker }));
         if (watchlists.length === 0) {
             watchlists.push({ name: "All Stocks", stocks: allStocksList });
@@ -510,7 +508,6 @@
             fetchLiveMarketQuotes();
         }
 
-        // Master List Modal Controls
         function openMasterListModal() {
             document.getElementById('upload-timestamp-display').innerText = `Last Uploaded: ${uploadTimestamp}`;
             document.getElementById('master-list-modal').style.display = 'flex';
@@ -518,6 +515,45 @@
 
         function closeMasterListModal() {
             document.getElementById('master-list-modal').style.display = 'none';
+        }
+
+        // Smart CSV Parser with Header Auto-Detection (handles Dhan, NSE, BSE formats seamlessly)
+        function parseCSVToStocks(csvText) {
+            let lines = csvText.split(/\r?\n/);
+            let list = [];
+            if (lines.length < 2) return list;
+
+            let headerLine = lines[0].toLowerCase();
+            let headers = headerLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+            
+            let symbolIdx = headers.findIndex(h => h.includes('symbol') || h.includes('ticker') || h.includes('code') || h.includes('sem_trading_symbol'));
+            let nameIdx = headers.findIndex(h => h.includes('name') || h.includes('company') || h.includes('desc') || h.includes('sem_smst_name'));
+
+            if (symbolIdx === -1) symbolIdx = 0;
+            if (nameIdx === -1) nameIdx = 1;
+
+            for (let i = 1; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+                let row = [];
+                let inQuotes = false;
+                let entry = "";
+                for (let char of line) {
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) { row.push(entry.trim()); entry = ""; }
+                    else entry += char;
+                }
+                row.push(entry.trim());
+
+                if (row.length > Math.max(symbolIdx, nameIdx)) {
+                    let symbol = row[symbolIdx] ? row[symbolIdx].replace(/^"|"$/g, '').trim().toUpperCase() : '';
+                    let name = row[nameIdx] ? row[nameIdx].replace(/^"|"$/g, '').trim() : '';
+                    if (symbol && symbol !== 'SYMBOL' && symbol !== 'SECURITY CODE' && symbol !== 'SEM_TRADING_SYMBOL' && name) {
+                        list.push({ name: name, ticker: symbol });
+                    }
+                }
+            }
+            return list;
         }
 
         function processMasterStockFiles() {
@@ -536,45 +572,54 @@
             }
 
             function finalizeProcessing() {
-                let mergedMap = {};
+                try {
+                    let mergedMap = {};
 
-                nseStocks.forEach(s => {
-                    mergedMap[s.ticker] = { name: s.name, ticker: s.ticker, exchange: 'NSE' };
-                });
+                    nseStocks.forEach(s => {
+                        mergedMap[s.ticker] = { name: s.name, ticker: s.ticker, exchange: 'NSE' };
+                    });
 
-                bseStocks.forEach(s => {
-                    if (mergedMap[s.ticker]) {
-                        mergedMap[s.ticker].exchange = 'Both';
+                    bseStocks.forEach(s => {
+                        if (mergedMap[s.ticker]) {
+                            mergedMap[s.ticker].exchange = 'Both';
+                        } else {
+                            mergedMap[s.ticker] = { name: s.name, ticker: s.ticker, exchange: 'BSE' };
+                        }
+                    });
+
+                    let newMasterList = Object.values(mergedMap);
+                    if (newMasterList.length > 0) {
+                        masterEquityDB = newMasterList;
+                        localStorage.setItem('maya_master_equity_db', JSON.stringify(masterEquityDB));
+                        
+                        uploadTimestamp = new Date().toLocaleString();
+                        localStorage.setItem('maya_master_upload_timestamp', uploadTimestamp);
+
+                        watchlists[0] = { name: "All Stocks", stocks: masterEquityDB.map(s => ({ name: s.name, ticker: s.ticker })) };
+                        localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
+
+                        alert(`Successfully processed ${masterEquityDB.length} stocks into master database!`);
+                        closeMasterListModal();
+                        renderWatchlistsManager();
+                        fetchLiveMarketQuotes();
                     } else {
-                        mergedMap[s.ticker] = { name: s.name, ticker: s.ticker, exchange: 'BSE' };
+                        alert("No valid stocks found in the uploaded files. Please check the CSV format.");
                     }
-                });
-
-                let newMasterList = Object.values(mergedMap);
-                if (newMasterList.length > 0) {
-                    masterEquityDB = newMasterList;
-                    localStorage.setItem('maya_master_equity_db', JSON.stringify(masterEquityDB));
-                    
-                    uploadTimestamp = new Date().toLocaleString();
-                    localStorage.setItem('maya_master_upload_timestamp', uploadTimestamp);
-
-                    // Update All Stocks Watchlist
-                    watchlists[0] = { name: "All Stocks", stocks: masterEquityDB.map(s => ({ name: s.name, ticker: s.ticker })) };
-                    localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
-
-                    alert(`Successfully merged ${masterEquityDB.length} stocks into master database!`);
-                    closeMasterListModal();
-                    renderWatchlistsManager();
-                    fetchLiveMarketQuotes();
-                } else {
-                    alert("Could not parse stocks from uploaded files. Please check CSV format.");
+                } catch(err) {
+                    alert("Error processing files: " + err.message);
                 }
             }
 
             if (nseInput.files.length > 0) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
-                    nseStocks = parseCSVToStocks(e.target.result);
+                    try {
+                        nseStocks = parseCSVToStocks(e.target.result);
+                    } catch(err) { console.error(err); }
+                    filesProcessed++;
+                    if (filesProcessed === totalFiles) finalizeProcessing();
+                };
+                reader.onerror = function() {
                     filesProcessed++;
                     if (filesProcessed === totalFiles) finalizeProcessing();
                 };
@@ -584,38 +629,18 @@
             if (bseInput.files.length > 0) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
-                    bseStocks = parseCSVToStocks(e.target.result);
+                    try {
+                        bseStocks = parseCSVToStocks(e.target.result);
+                    } catch(err) { console.error(err); }
+                    filesProcessed++;
+                    if (filesProcessed === totalFiles) finalizeProcessing();
+                };
+                reader.onerror = function() {
                     filesProcessed++;
                     if (filesProcessed === totalFiles) finalizeProcessing();
                 };
                 reader.readAsText(bseInput.files[0]);
             }
-        }
-
-        function parseCSVToStocks(csvText) {
-            let lines = csvText.split('\n');
-            let list = [];
-            for (let i = 1; i < lines.length; i++) {
-                let line = lines[i].trim();
-                if (!line) continue;
-                let row = [];
-                let inQuotes = false;
-                let entry = "";
-                for (let char of line) {
-                    if (char === '"') inQuotes = !inQuotes;
-                    else if (char === ',' && !inQuotes) { row.push(entry.trim()); entry = ""; }
-                    else entry += char;
-                }
-                row.push(entry.trim());
-                if (row.length >= 2 && row[0] && row[1]) {
-                    let symbol = row[0].replace(/^"|"$/g, '').trim().toUpperCase();
-                    let name = row[1].replace(/^"|"$/g, '').trim();
-                    if (symbol && symbol !== "SYMBOL" && symbol !== "SECURITY CODE" && name) {
-                        list.push({ name: name, ticker: symbol });
-                    }
-                }
-            }
-            return list;
         }
 
         async function fetchLiveMarketQuotes() {
@@ -668,7 +693,6 @@
         }
 
         function renderWatchlistsManager() {
-            // Keep All Stocks updated
             watchlists[0] = { name: "All Stocks", stocks: masterEquityDB.map(s => ({ name: s.name, ticker: s.ticker })) };
             
             const container = document.getElementById('watchlist-rows');
@@ -682,7 +706,7 @@
                     <div class="wl-row">
                         <div class="wl-reorder-group">
                             <button class="sort-btn" ${isFirst ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, -1)">⬆️</button>
-                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️</button>
+                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️️</button>
                         </div>
                         <input type="text" class="wl-name-field" value="${wl.name}" ${isAllStocksLocked ? 'readonly style="background:rgba(255,255,255,0.04);"' : ''} oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
                         <div class="wl-count-badge">${wl.stocks.length} stk</div>
@@ -702,14 +726,14 @@
         }
 
         function updateWatchlistName(idx, newName) {
-            if (idx === 0) return; // All Stocks locked
+            if (idx === 0) return;
             watchlists[idx].name = newName;
             localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
             if (idx === activeWatchlistIndex) document.getElementById('active-wl-title').innerText = newName;
         }
 
         function moveWatchlistOrder(idx, direction) {
-            if (idx === 0 || idx + direction === 0) return; // Keep All Stocks locked at top
+            if (idx === 0 || idx + direction === 0) return;
             let newIdx = idx + direction;
             if (newIdx < 0 || newIdx >= watchlists.length) return;
             let temp = watchlists[idx];
@@ -739,7 +763,6 @@
                 let ticker = stock.ticker.toUpperCase();
                 let quote = stockQuoteCache[ticker] || { cmp: 100.0, pctChange: 1.0, rsVal: 0.1 };
 
-                // Find exchange tag if available
                 let masterMatch = masterEquityDB.find(m => m.ticker === ticker);
                 let exch = masterMatch ? masterMatch.exchange : 'NSE';
                 let tagClass = exch === 'NSE' ? 'tag-nse' : (exch === 'BSE' ? 'tag-bse' : 'tag-both');
@@ -828,7 +851,7 @@
         }
 
         function openEditWatchlistModal(idx) {
-            if (idx === 0) return; // All Stocks cannot be edited manually
+            if (idx === 0) return;
             editingWatchlistIndex = idx;
             editingStocksTemp = JSON.parse(JSON.stringify(watchlists[idx].stocks));
             document.getElementById('edit-modal-header').innerText = `Edit Stocks: ${watchlists[idx].name}`;
@@ -977,7 +1000,6 @@
         window.addEventListener('DOMContentLoaded', () => {
             initializeMasterDB();
 
-            // 1-second live countdown and price refresh loop
             let countdown = 1;
             setInterval(() => {
                 if (countdown <= 0) {
