@@ -1,0 +1,101 @@
+name: Hourly Stock Master Sync & Alert
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch: # Allows manual run button on GitHub
+
+jobs:
+  sync-stocks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Stock Sync Script
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          ALERT_TO: ${{ secrets.ALERT_TO }}
+        run: |
+          python -c "
+          import urllib.request
+          import json
+          import os
+          import smtplib
+          from email.mime.text import MIMEText
+
+          print('Fetching latest stock list...')
+          # Official NSE Equity Master URL (reliable and direct)
+          url = 'https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv'
+          req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+          
+          try:
+              with urllib.request.urlopen(req) as response:
+                  lines = [line.decode('utf-8') for line in response.readlines()]
+              
+              new_stocks = []
+              for line in lines[1:]:
+                  parts = [p.strip('\" ') for p in line.split(',')]
+                  if len(parts) >= 2 and parts[0] and parts[1]:
+                      if parts[0] != 'SYMBOL':
+                          new_stocks.append({'name': parts[1], 'ticker': parts[0]})
+
+              # Load old master if exists
+              old_stocks = []
+              if os.path.exists('stocks_master.json'):
+                  with open('stocks_master.json', 'r') as f:
+                      try:
+                          old_stocks = json.load(f)
+                      except:
+                          old_stocks = []
+
+              old_tickers = {s['ticker'] for s in old_stocks}
+              new_tickers = {s['ticker'] for s in new_stocks}
+
+              added = new_tickers - old_tickers
+              removed = old_tickers - new_tickers
+
+              if added or removed or not old_stocks:
+                  print(f'Changes detected! Added: {len(added)}, Removed: {len(removed)}')
+                  
+                  # Save updated master
+                  with open('stocks_master.json', 'w') as f:
+                      json.dump(new_stocks, f, indent=2)
+
+                  # Send Email Alert if configured
+                  mail_user = os.environ.get('MAIL_USER')
+                  mail_pass = os.environ.get('MAIL_PASS')
+                  alert_to = os.environ.get('ALERT_TO')
+
+                  if mail_user and mail_pass and alert_to:
+                      msg_content = f'Stock Master Update Alert:\n\nAdded Stocks: {list(added)}\nRemoved Stocks: {list(removed)}'
+                      msg = MIMEText(msg_content)
+                      msg['Subject'] = '🚀 Stock Market Master List Updated'
+                      msg['From'] = mail_user
+                      msg['To'] = alert_to
+
+                      server = smtplib.SMTP('smtp.gmail.com', 587)
+                      server.starttls()
+                      server.login(mail_user, mail_pass)
+                      server.sendmail(mail_user, [alert_to], msg.as_string())
+                      server.quit()
+                      print('Email alert sent successfully.')
+              else:
+                  print('No changes in stock list.')
+          except Exception as e:
+              print(f'Error during sync: {e}')
+          "
+
+      - name: Commit and Push Changes if updated
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          git add stocks_master.json
+          git commit -m 'Auto-update stock master database' || exit 0
+          git push
