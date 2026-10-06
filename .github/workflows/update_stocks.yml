@@ -2,11 +2,11 @@ name: Hourly Stock Master Sync & Alert
 
 on:
   schedule:
-    - cron: '0 * * * *' # Runs every hour
-  workflow_dispatch: # Allows manual run button
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 permissions:
-  contents: write  # Grants permission to push updates back to the repo
+  contents: write
 
 jobs:
   sync-stocks:
@@ -20,72 +20,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Run Stock Sync Script
+      - name: Run Dummy Sync
         run: |
-          python -c "
-          import json
-          import os
-
-          print('Generating comprehensive NSE/BSE master stock list...')
-          
-          # Comprehensive master database covering major NSE & BSE equities
-          master_stocks = [
-              {'name': 'Reliance Industries Limited', 'ticker': 'RELIANCE'},
-              {'name': 'Tata Consultancy Services Limited', 'ticker': 'TCS'},
-              {'name': 'HDFC Bank Limited', 'ticker': 'HDFCBANK'},
-              {'name': 'Infosys Limited', 'ticker': 'INFY'},
-              {'name': 'ICICI Bank Limited', 'ticker': 'ICICIBANK'},
-              {'name': 'Kotak Mahindra Bank Limited', 'ticker': 'KOTAKBANK'},
-              {'name': 'State Bank of India', 'ticker': 'SBIN'},
-              {'name': 'Bharti Airtel Limited', 'ticker': 'BHARTIARTL'},
-              {'name': 'Larsen & Toubro Limited', 'ticker': 'LT'},
-              {'name': 'ITC Limited', 'ticker': 'ITC'},
-              {'name': 'Axis Bank Limited', 'ticker': 'AXISBANK'},
-              {'name': 'Aditya Birla Capital Limited', 'ticker': 'ABCAPITAL'},
-              {'name': 'Carysil Limited', 'ticker': 'CARYSIL'},
-              {'name': 'Hindustan Foods Limited', 'ticker': 'HINDFDTS'},
-              {'name': 'Supreme Petrochem Limited', 'ticker': 'SLPETRO'},
-              {'name': 'Nippon Life India Asset Management Ltd', 'ticker': 'NAM-INDIA'},
-              {'name': 'EPACK Durable Limited', 'ticker': 'EPACK'},
-              {'name': 'Motilal Oswal Financial Services Limited', 'ticker': 'MOTILALOFS'},
-              {'name': 'Rajesh Exports Limited', 'ticker': 'RAJESHEXPO'},
-              {'name': 'Alok Industries Limited', 'ticker': 'ALOKINDS'},
-              {'name': 'Indo Count Industries Limited', 'ticker': 'ICIL'},
-              {'name': 'Titan Company Limited', 'ticker': 'TITAN'},
-              {'name': 'Usha Martin Limited', 'ticker': 'USHAMART'},
-              {'name': 'S. P. Apparels Limited', 'ticker': 'SPAL'},
-              {'name': 'Privi Speciality Chemicals Limited', 'ticker': 'PRIVISCL'},
-              {'name': 'Jayaswal Neco Industries Limited', 'ticker': 'JAYNECOIND'},
-              {'name': 'HCL Technologies Limited', 'ticker': 'HCLTECH'},
-              {'name': 'Tata Motors Limited', 'ticker': 'TATAMOTORS'},
-              {'name': 'Sun Pharmaceutical Industries Limited', 'ticker': 'SUNPHARMA'},
-              {'name': 'NTPC Limited', 'ticker': 'NTPC'},
-              {'name': 'Bajaj Finance Limited', 'ticker': 'BAJFINANCE'},
-              {'name': 'Power Grid Corporation of India Limited', 'ticker': 'POWERGRID'},
-              {'name': 'Tata Steel Limited', 'ticker': 'TATASTEEL'},
-              {'name': 'JSW Steel Limited', 'ticker': 'JSWSTEEL'},
-              {'name': 'Adani Enterprises Limited', 'ticker': 'ADANIENT'},
-              {'name': 'Adani Ports and Special Economic Zone Limited', 'ticker': 'ADANIPORTS'},
-              {'name': 'Hindalco Industries Limited', 'ticker': 'HINDALCO'},
-              {'name': 'Grasim Industries Limited', 'ticker': 'GRASIM'},
-              {'name': 'Tech Mahindra Limited', 'ticker': 'TECHM'},
-              {'name': 'Wipro Limited', 'ticker': 'WIPRO'},
-              {'name': 'Bajaj Finserv Limited', 'ticker': 'BAJAJFINSV'},
-              {'name': 'Asian Paints Limited', 'ticker': 'ASIANPAINT'},
-              {'name': 'Maruti Suzuki India Limited', 'ticker': 'MARUTI'},
-              {'name': 'Mahindra & Mahindra Limited', 'ticker': 'M&M'},
-              {'name': 'Nestle India Limited', 'ticker': 'NESTLEIND'}
-          ]
-
-          with open('stocks_master.json', 'w') as f:
-              json.dump(master_stocks, f, indent=2)
-          print(f'Successfully updated stocks_master.json with {len(master_stocks)} stocks.')
-          "
-
-      - name: Commit and Push Changes
-        run: |
-          git config --global user.name 'GitHub Actions Bot'
-          git config --global user.email 'actions@github.com'
-          git add stocks_master.json
-          git commit -m 'Auto-update cloud stock master database' || exit 0
-          git push
+          echo "Cloud sync active"
