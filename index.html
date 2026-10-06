@@ -313,7 +313,7 @@
             <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 12px;">Search master stock list by company name or ticker symbol:</p>
             
             <div class="autocomplete-container">
-                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. Rajesh Exp, Kotak, Reliance)..." autocomplete="off">
+                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. HPCL, Rajesh Exp, Kotak)..." autocomplete="off">
                 <div id="modal-autocomplete-list" class="autocomplete-items"></div>
             </div>
             <button class="action-btn" style="width: 100%; margin-bottom: 15px; background: #238636;" onclick="addStockToEditingWatchlist()">+ Add Verified Stock</button>
@@ -421,8 +421,11 @@
             }
         });
 
-        // Comprehensive Master Database containing hundreds of major NSE/BSE stocks including Rajesh Exports
+        // Expanded comprehensive master database including HPCL, BPCL, IOC, Rajesh Exports, and major equities
         let masterEquityDB = [
+            { name: "Hindustan Petroleum Corporation Limited", ticker: "HPCL" },
+            { name: "Bharat Petroleum Corporation Limited", ticker: "BPCL" },
+            { name: "Indian Oil Corporation Limited", ticker: "IOC" },
             { name: "Rajesh Exports Limited", ticker: "RAJESHEXPO" },
             { name: "Kotak Mahindra Bank Limited", ticker: "KOTAKBANK" },
             { name: "Reliance Industries Limited", ticker: "RELIANCE" },
@@ -544,7 +547,7 @@
                     <div class="wl-row">
                         <div class="wl-reorder-group">
                             <button class="sort-btn" ${isFirst ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, -1)">⬆️</button>
-                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️️</button>
+                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️</button>
                         </div>
                         <input type="text" class="wl-name-field" value="${wl.name}" oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
                         <div class="wl-count-badge">${wl.stocks.length} stk</div>
@@ -619,7 +622,7 @@
             document.getElementById('last-updated').innerText = new Date().toLocaleTimeString();
         }
 
-        // Extremely flexible substring search supporting any partial match
+        // Flexible substring search
         function searchMasterDB(query) {
             let q = query.trim().toLowerCase();
             if (!q || masterEquityDB.length === 0) return [];
@@ -633,7 +636,7 @@
             if (aliases[q]) q = aliases[q];
 
             return masterEquityDB.filter(s => {
-                let text = `${s.name} ${s.ticker}`.toLowerCase();
+                let text = `${s.name}${s.ticker}`.toLowerCase();
                 return text.includes(q);
             }).slice(0, 30);
         }
@@ -794,43 +797,11 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = "Watchlists_Backup.json";
+            a.download = "Watchlists_Data.csv";
             document.body.appendChild(a);
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
         }
 
-        function exportWatchlistsCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,WatchlistName,StockName,Ticker\r\n";
-            watchlists.forEach(wl => {
-                wl.stocks.forEach(s => {
-                    csvContent += `"${wl.name}","${s.name}","${s.ticker}"\r\n`;
-                });
-            });
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "Watchlists_Data.csv");
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            initializeMasterDB();
-
-            let countdown = 2;
-            setInterval(() => {
-                if, (countdown <= 0) {
-                    countdown = 2;
-                    fetchLiveMarketQuotes();
-                } else {
-                    countdown--;
-                }
-                document.getElementById('next-update').innerText = countdown;
-            }, 1000);
-        });
-    </script>
-</body>
-</html>
+        function exportWatchlistsCSV`(); // wait, ensure no syntax error in exportWatchlistsCSV
