@@ -122,49 +122,47 @@
             display: flex;
             gap: 8px;
             align-items: center;
-        }
-        .wl-reorder-group {
-            display: flex;
-            gap: 3px;
-        }
-        .wl-name-field {
             background: var(--bg);
-            color: var(--strong-text);
             border: 1px solid var(--border);
-            padding: 7px 10px;
+            padding: 5px 8px;
             border-radius: 6px;
+            cursor: grab;
+            transition: background-color 0.2s;
+        }
+        .wl-row:active { cursor: grabbing; }
+        .wl-row.dragging { opacity: 0.4; }
+        .wl-row.locked-row { cursor: default; background: rgba(255,255,255,0.02); }
+
+        .drag-handle { color: var(--muted); font-size: 1.1em; cursor: grab; user-select: none; padding: 0 2px; }
+        .locked-handle { opacity: 0.2; cursor: default; }
+
+        .wl-name-field {
+            background: transparent;
+            color: var(--strong-text);
+            border: none;
+            padding: 4px 6px;
+            border-radius: 4px;
             font-size: 0.9em;
             font-weight: 600;
             flex-grow: 1;
-            transition: 0.2s;
         }
-        .wl-name-field:focus { border-color: var(--blue); outline: none; }
+        .wl-name-field:focus { background: var(--card-bg); border: 1px solid var(--blue); outline: none; }
         
         .wl-count-badge {
             background: rgba(88,166,255,0.1);
             color: var(--blue);
             border: 1px solid var(--border);
-            padding: 7px 10px;
+            padding: 5px 10px;
             border-radius: 6px;
-            font-size: 0.85em;
+            font-size: 0.82em;
             font-weight: bold;
             min-width: 75px;
             text-align: center;
-        }
-
-        .edit-wl-btn {
-            background: var(--blue);
-            color: #fff;
-            border: none;
-            padding: 7px 14px;
-            border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 0.85em;
             transition: 0.2s;
         }
-        .edit-wl-btn.active-wl { border: 2px solid var(--strong-text); background: #1f6feb; }
-        .edit-wl-btn:hover { opacity: 0.9; }
+        .wl-count-badge:hover { background: rgba(88,166,255,0.25); border-color: var(--blue); }
+        .wl-count-badge.active-badge { background: #1f6feb; color: #fff; border-color: var(--strong-text); }
 
         .action-btn {
             background: var(--blue);
@@ -178,6 +176,8 @@
             text-align: center;
         }
         .action-btn:hover { opacity: 0.9; }
+
+        .screener-search-row { margin-bottom: 8px; }
 
         .screener-controls {
             display: grid;
@@ -274,10 +274,7 @@
             align-items: center;
             margin-bottom: 8px;
         }
-        .sort-btn-group {
-            display: flex;
-            gap: 6px;
-        }
+        .sort-btn-group { display: flex; gap: 6px; }
         .sort-btn {
             background: var(--bg);
             color: var(--text);
@@ -370,7 +367,7 @@
     <div class="header-container">
         <h1>MaYa’s Indian Market RS Strategy Dashboard</h1>
         <p class="subtitle">Cloud-Hosted Automated NSE/BSE Live Streaming Dashboard</p>
-        <button id="theme-toggle">☀️ Light Mode</button>
+        <button id="theme-toggle">☀️️ Light Mode</button>
     </div>
 
     <div class="dashboard-grid">
@@ -385,7 +382,7 @@
                 <button class="action-btn" style="background: var(--blue); padding: 4px 8px; font-size: 0.75em;" onclick="openMasterListModal()">Master Stock List</button>
             </div>
 
-            <div style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Select active watchlist for Card 2 screener:</div>
+            <div style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Click count badge to view, drag handle (⋮⋮) to reorder:</div>
             
             <div class="watchlist-select-list" id="watchlist-rows"></div>
         </div>
@@ -396,16 +393,19 @@
                 <span style="font-size: 0.78em; color: var(--blue); font-weight: bold;" id="active-wl-count">0 stocks</span>
             </div>
 
+            <div class="screener-search-row">
+                <input type="text" id="screener-filter-input" class="search-box" placeholder="🔍 Search stocks in active watchlist (name or ticker)..." oninput="renderCard2Screener()" style="padding: 7px 10px; font-size: 0.85em;">
+            </div>
+
             <div class="screener-controls">
                 <div class="control-group">
                     <label>Comparative Index / Stock:</label>
                     <select id="benchmark-select" class="control-select" onchange="renderCard2Screener()">
-                        <option value="NIFTYMIDSML400">NIFTY MIDSMALLCAP 400 (NIFTYMIDSML400)</option>
-                        <option value="NIFTY 50">Nifty 50</option>
+                        <option value="NIFTYMIDSML400">Nifty MidSmallCap 400</option>
+                        <option value="NIFTYSML250">NIFTY Smallcap 250</option>
+                        <option value="NIFTYMIDSELECT">Nifty Midcap Select</option>
                         <option value="NIFTY BANK">Nifty Bank</option>
-                        <option value="NIFTY 500">Nifty 500</option>
-                        <option value="NIFTY MIDCAP 150">Nifty Midcap 150</option>
-                        <option value="NIFTY SMALLCAP 100">Nifty Smallcap 100</option>
+                        <option value="NIFTY 50">Nifty 50</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -625,24 +625,76 @@
             const container = document.getElementById('watchlist-rows');
             let html = "";
             watchlists.forEach((wl, idx) => {
-                let isFirst = idx === 0;
-                let isLast = idx === watchlists.length - 1;
-                let isActive = idx === activeWatchlistIndex ? 'active-wl' : '';
-                let isAllStocksLocked = idx === 0;
+                let isActiveBadge = idx === activeWatchlistIndex ? 'active-badge' : '';
+                let isLocked = idx === 0;
+                let dragAttr = isLocked ? '' : 'draggable="true"';
+                let rowClass = isLocked ? 'wl-row locked-row' : 'wl-row';
+                let handleClass = isLocked ? 'drag-handle locked-handle' : 'drag-handle';
+
                 html += `
-                    <div class="wl-row">
-                        <div class="wl-reorder-group">
-                            <button class="sort-btn" ${isFirst ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, -1)">⬆️</button>
-                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️</button>
-                        </div>
-                        <input type="text" class="wl-name-field" value="${wl.name}" ${isAllStocksLocked ? 'readonly style="background:rgba(255,255,255,0.04);"' : ''} oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
-                        <div class="wl-count-badge">${wl.stocks.length} stk</div>
-                        <button class="edit-wl-btn ${isActive}" onclick="setActiveWatchlist(${idx})">Select</button>
-                        <button class="sort-btn" onclick="openEditWatchlistModal(${idx})" title="Edit Stocks" ${isAllStocksLocked ? 'disabled style="opacity:0.3; cursor:default;"' : ''}>✏️</button>
+                    <div class="${rowClass}" ${dragAttr} 
+                         ondragstart="handleDragStart(event, ${idx})" 
+                         ondragover="handleDragOver(event)" 
+                         ondrop="handleDrop(event, ${idx})"
+                         ondragenter="handleDragEnter(event, ${idx})"
+                         ondragleave="handleDragLeave(event, ${idx})">
+                        <div class="${handleClass}" title="${isLocked ? 'All Stocks locked at top' : 'Click & drag to reorder'}">⋮⋮</div>
+                        <input type="text" class="wl-name-field" value="${wl.name}" ${isLocked ? 'readonly' : ''} oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
+                        <div class="wl-count-badge ${isActiveBadge}" onclick="setActiveWatchlist(${idx})" title="Click to view stocks in Card 2">${wl.stocks.length} stk</div>
+                        <button class="sort-btn" onclick="openEditWatchlistModal(${idx})" title="Edit Stocks" ${isLocked ? 'disabled style="opacity:0.3; cursor:default;"' : ''}>✏️</button>
                     </div>
                 `;
             });
             container.innerHTML = html;
+        }
+
+        // Drag and Drop handlers for Watchlists
+        let draggedIndex = null;
+
+        function handleDragStart(e, idx) {
+            if (idx === 0) { e.preventDefault(); return; }
+            draggedIndex = idx;
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e, idx) {
+            e.preventDefault();
+            if (idx !== 0) {
+                e.currentTarget.style.borderColor = 'var(--blue)';
+            }
+        }
+
+        function handleDragLeave(e, idx) {
+            e.currentTarget.style.borderColor = 'var(--border)';
+        }
+
+        function handleDrop(e, targetIdx) {
+            e.preventDefault();
+            e.currentTarget.style.borderColor = 'var(--border)';
+            if (draggedIndex === null || targetIdx === 0 || draggedIndex === 0) return;
+
+            let item = watchlists.splice(draggedIndex, 1)[0];
+            watchlists.splice(targetIdx, 0, item);
+
+            if (activeWatchlistIndex === draggedIndex) {
+                activeWatchlistIndex = targetIdx;
+            } else if (activeWatchlistIndex > draggedIndex && activeWatchlistIndex <= targetIdx) {
+                activeWatchlistIndex--;
+            } else if (activeWatchlistIndex < draggedIndex && activeWatchlistIndex >= targetIdx) {
+                activeWatchlistIndex++;
+            }
+
+            localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
+            localStorage.setItem('maya_active_wl_idx', activeWatchlistIndex);
+            draggedIndex = null;
+            renderWatchlistsManager();
+            renderCard2Screener();
         }
 
         function setActiveWatchlist(idx) {
@@ -659,25 +711,17 @@
             if (idx === activeWatchlistIndex) document.getElementById('active-wl-title').innerText = newName;
         }
 
-        function moveWatchlistOrder(idx, direction) {
-            if (idx === 0 || idx + direction === 0) return;
-            let newIdx = idx + direction;
-            if (newIdx < 0 || newIdx >= watchlists.length) return;
-            let temp = watchlists[idx];
-            watchlists[idx] = watchlists[newIdx];
-            watchlists[newIdx] = temp;
-            if (activeWatchlistIndex === idx) activeWatchlistIndex = newIdx;
-            else if (activeWatchlistIndex === newIdx) activeWatchlistIndex = idx;
-            localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
-            localStorage.setItem('maya_active_wl_idx', activeWatchlistIndex);
-            renderWatchlistsManager();
-            renderCard2Screener();
-        }
-
         function renderCard2Screener() {
             let activeWL = watchlists[activeWatchlistIndex] || watchlists[0];
             document.getElementById('active-wl-title').innerText = activeWL.name;
-            document.getElementById('active-wl-count').innerText = `${activeWL.stocks.length} stocks`;
+            
+            const filterText = document.getElementById('screener-filter-input').value.trim().toLowerCase();
+            let filteredStocks = activeWL.stocks;
+            if (filterText) {
+                filteredStocks = activeWL.stocks.filter(s => `${s.name} ${s.ticker}`.toLowerCase().includes(filterText));
+            }
+
+            document.getElementById('active-wl-count').innerText = `${filteredStocks.length} of ${activeWL.stocks.length} stocks`;
 
             const tbody = document.getElementById('screener-table-body');
             if (activeWL.stocks.length === 0) {
@@ -685,10 +729,15 @@
                 return;
             }
 
+            if (filteredStocks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--muted); padding: 30px;">No stocks match your filter criteria.</td></tr>`;
+                return;
+            }
+
             generateQuickQuotes();
 
             let html = "";
-            activeWL.stocks.forEach((stock) => {
+            filteredStocks.forEach((stock) => {
                 let ticker = stock.ticker.toUpperCase();
                 let quote = stockQuoteCache[ticker] || { cmp: 100.0, pctChange: 1.0, rsVal: 0.1 };
 
@@ -812,8 +861,8 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 0.85em; gap: 6px;">
                         <div style="flex-grow: 1;"><strong>${s.name}</strong> <span style="color: var(--blue); font-family: monospace;">(${s.ticker})</span></div>
                         <div style="display: flex; gap: 4px;">
-                            <button class="sort-btn" ${isFirst ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveStockInEdit(${idx}, -1)">⬆️</button>
-                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveStockInEdit(${idx}, 1)">⬇️</button>
+                            <button class="sort-btn" onclick="moveStockInEdit(${idx}, -1)" ${isFirst ? 'disabled style="opacity:0.3"' : ''}>⬆️</button>
+                            <button class="sort-btn" onclick="moveStockInEdit(${idx}, 1)" ${isLast ? 'disabled style="opacity:0.3"' : ''}>⬇️</button>
                             <button class="action-btn" style="background: var(--red); padding: 3px 7px; font-size: 0.75em;" onclick="removeStockFromEditing(${idx})">Del</button>
                         </div>
                     </div>
