@@ -115,7 +115,7 @@
             gap: 6px;
             margin-bottom: 10px;
             overflow-y: auto;
-            max-height: 330px;
+            max-height: 420px;
             padding-right: 4px;
         }
         .wl-row {
@@ -166,13 +166,6 @@
         .edit-wl-btn.active-wl { border: 2px solid var(--strong-text); background: #1f6feb; }
         .edit-wl-btn:hover { opacity: 0.9; }
 
-        .file-io-box {
-            border-top: 1px solid var(--border);
-            padding-top: 10px;
-            display: flex;
-            gap: 10px;
-            margin-top: auto;
-        }
         .action-btn {
             background: var(--blue);
             color: #fff;
@@ -183,7 +176,6 @@
             font-size: 0.9em;
             font-weight: bold;
             text-align: center;
-            flex: 1;
         }
         .action-btn:hover { opacity: 0.9; }
 
@@ -318,7 +310,7 @@
             <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Search master stock list by company name or ticker symbol:</p>
             
             <div class="autocomplete-container">
-                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. Reliance, HPCL)..." autocomplete="off">
+                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker..." autocomplete="off">
                 <div id="modal-autocomplete-list" class="autocomplete-items"></div>
             </div>
             <button class="action-btn" style="width: 100%; margin-bottom: 12px; background: #238636;" onclick="addStockToEditingWatchlist()">+ Add Selected Stock</button>
@@ -344,8 +336,8 @@
             <div id="modal-stocks-list" style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 15px; background: var(--bg);"></div>
 
             <div style="display: flex; gap: 10px;">
-                <button class="action-btn" style="background: #238636;" onclick="saveEditWatchlistChanges()">Save Changes</button>
-                <button class="action-btn" style="background: #21262d; border: 1px solid var(--border);" onclick="closeEditModal()">Cancel</button>
+                <button class="action-btn" style="background: #238636; flex: 1;" onclick="saveEditWatchlistChanges()">Save Changes</button>
+                <button class="action-btn" style="background: #21262d; border: 1px solid var(--border); flex: 1;" onclick="closeEditModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -354,7 +346,7 @@
     <div id="master-list-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 class="modal-title">Master Stock List Upload</h3>
-            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 15px;">Upload NSE or BSE CSV lists (upload either one or both) to update the unified master database.</p>
+            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 15px;">Upload NSE or BSE CSV lists to update the unified master database.</p>
             
             <div style="margin-bottom: 15px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
                 <label style="display: block; font-size: 0.85em; font-weight: bold; color: var(--strong-text); margin-bottom: 5px;">Upload NSE Listed Stocks CSV (Optional):</label>
@@ -369,8 +361,8 @@
             <div id="upload-timestamp-display" style="font-size: 0.82em; color: var(--blue); margin-bottom: 15px; font-weight: bold;">Last Uploaded: Never</div>
 
             <div style="display: flex; gap: 10px;">
-                <button class="action-btn" style="background: #238636;" onclick="processMasterStockFiles()">Save & Process Master Lists</button>
-                <button class="action-btn" style="background: #21262d; border: 1px solid var(--border);" onclick="closeMasterListModal()">Cancel</button>
+                <button class="action-btn" style="background: #238636; flex: 1;" onclick="processMasterStockFiles()">Save & Process Master Lists</button>
+                <button class="action-btn" style="background: #21262d; border: 1px solid var(--border); flex: 1;" onclick="closeMasterListModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -390,17 +382,12 @@
 
             <div id="csv-banner" class="csv-status-banner">
                 <span id="csv-status-text">✅ Master Database Active.</span>
-                <button class="action-btn" style="background: var(--blue); padding: 4px 8px; font-size: 0.75em; flex: unset;" onclick="openMasterListModal()">Master Stock List</button>
+                <button class="action-btn" style="background: var(--blue); padding: 4px 8px; font-size: 0.75em;" onclick="openMasterListModal()">Master Stock List</button>
             </div>
 
             <div style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Select active watchlist for Card 2 screener:</div>
             
             <div class="watchlist-select-list" id="watchlist-rows"></div>
-
-            <div class="file-io-box">
-                <button class="action-btn" style="background: #238636;" onclick="saveWatchlistsToLocalFolder()">💾 Save Backup</button>
-                <button class="action-btn" style="background: #21262d; border: 1px solid var(--border);" onclick="exportWatchlistsCSV()">📥 Export CSV</button>
-            </div>
         </div>
 
         <div class="card">
@@ -462,21 +449,10 @@
             }
         });
 
-        // Default robust fallback master database
         let masterEquityDB = [
             { name: "Reliance Industries Limited", ticker: "RELIANCE", exchange: "Both" },
             { name: "Tata Consultancy Services Limited", ticker: "TCS", exchange: "Both" },
-            { name: "HDFC Bank Limited", ticker: "HDFCBANK", exchange: "Both" },
-            { name: "Infosys Limited", ticker: "INFY", exchange: "Both" },
-            { name: "ICICI Bank Limited", ticker: "ICICIBANK", exchange: "Both" },
-            { name: "Kotak Mahindra Bank Limited", ticker: "KOTAKBANK", exchange: "Both" },
-            { name: "State Bank of India", ticker: "SBIN", exchange: "Both" },
-            { name: "Bharti Airtel Limited", ticker: "BHARTIARTL", exchange: "Both" },
-            { name: "Larsen & Toubro Limited", ticker: "LT", exchange: "Both" },
-            { name: "ITC Limited", ticker: "ITC", exchange: "Both" },
-            { name: "Axis Bank Limited", ticker: "AXISBANK", exchange: "Both" },
-            { name: "Rajesh Exports Limited", ticker: "RAJESHEXPO", exchange: "Both" },
-            { name: "Hindustan Petroleum Corporation Limited", ticker: "HPCL", exchange: "Both" }
+            { name: "HDFC Bank Limited", ticker: "HDFCBANK", exchange: "Both" }
         ];
 
         let savedMaster = localStorage.getItem('maya_master_equity_db');
@@ -486,7 +462,6 @@
 
         let uploadTimestamp = localStorage.getItem('maya_master_upload_timestamp') || "Never";
 
-        // Watchlists setup: Watchlist 0 is permanently "All Stocks"
         let storedWl = JSON.parse(localStorage.getItem('maya_watchlists_card1'));
         let watchlists = storedWl && storedWl.length > 0 ? storedWl : [];
         
@@ -505,7 +480,7 @@
 
         function initializeMasterDB() {
             renderWatchlistsManager();
-            fetchLiveMarketQuotes();
+            renderCard2Screener();
         }
 
         function openMasterListModal() {
@@ -517,7 +492,6 @@
             document.getElementById('master-list-modal').style.display = 'none';
         }
 
-        // Smart CSV Parser with Header Auto-Detection (handles Dhan, NSE, BSE formats seamlessly)
         function parseCSVToStocks(csvText) {
             let lines = csvText.split(/\r?\n/);
             let list = [];
@@ -574,11 +548,9 @@
             function finalizeProcessing() {
                 try {
                     let mergedMap = {};
-
                     nseStocks.forEach(s => {
                         mergedMap[s.ticker] = { name: s.name, ticker: s.ticker, exchange: 'NSE' };
                     });
-
                     bseStocks.forEach(s => {
                         if (mergedMap[s.ticker]) {
                             mergedMap[s.ticker].exchange = 'Both';
@@ -601,9 +573,9 @@
                         alert(`Successfully processed ${masterEquityDB.length} stocks into master database!`);
                         closeMasterListModal();
                         renderWatchlistsManager();
-                        fetchLiveMarketQuotes();
+                        renderCard2Screener();
                     } else {
-                        alert("No valid stocks found in the uploaded files. Please check the CSV format.");
+                        alert("No valid stocks found in the uploaded files.");
                     }
                 } catch(err) {
                     alert("Error processing files: " + err.message);
@@ -613,83 +585,38 @@
             if (nseInput.files.length > 0) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
-                    try {
-                        nseStocks = parseCSVToStocks(e.target.result);
-                    } catch(err) { console.error(err); }
+                    try { nseStocks = parseCSVToStocks(e.target.result); } catch(err) {}
                     filesProcessed++;
                     if (filesProcessed === totalFiles) finalizeProcessing();
                 };
-                reader.onerror = function() {
-                    filesProcessed++;
-                    if (filesProcessed === totalFiles) finalizeProcessing();
-                };
+                reader.onerror = () => { filesProcessed++; if (filesProcessed === totalFiles) finalizeProcessing(); };
                 reader.readAsText(nseInput.files[0]);
             }
 
             if (bseInput.files.length > 0) {
                 let reader = new FileReader();
                 reader.onload = function(e) {
-                    try {
-                        bseStocks = parseCSVToStocks(e.target.result);
-                    } catch(err) { console.error(err); }
+                    try { bseStocks = parseCSVToStocks(e.target.result); } catch(err) {}
                     filesProcessed++;
                     if (filesProcessed === totalFiles) finalizeProcessing();
                 };
-                reader.onerror = function() {
-                    filesProcessed++;
-                    if (filesProcessed === totalFiles) finalizeProcessing();
-                };
+                reader.onerror = () => { filesProcessed++; if (filesProcessed === totalFiles) finalizeProcessing(); };
                 reader.readAsText(bseInput.files[0]);
             }
         }
 
-        async function fetchLiveMarketQuotes() {
+        function generateQuickQuotes() {
             let activeWL = watchlists[activeWatchlistIndex] || watchlists[0];
-            if (activeWL.stocks.length === 0) {
-                renderCard2Screener();
-                return;
-            }
-
-            for (let stock of activeWL.stocks) {
+            activeWL.stocks.forEach(stock => {
                 let ticker = stock.ticker.toUpperCase();
-                try {
-                    let yfSymbol = ticker + ".NS";
-                    let proxyUrl = `https://corsproxy.io/?i=1&u=` + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${yfSymbol}?interval=1d&range=5d`);
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1200);
-                    let res = await fetch(proxyUrl, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-
-                    if (res.ok) {
-                        let data = await res.json();
-                        let meta = data.chart.result[0].meta;
-                        let cmp = meta.regularMarketPrice || meta.chartPreviousClose;
-                        let prevClose = meta.chartPreviousClose || meta.previousClose;
-                        let pctChange = ((cmp - prevClose) / prevClose) * 100;
-                        
-                        let quotes = data.chart.result[0].indicators.quote[0].close;
-                        let validCloses = quotes ? quotes.filter(c => c != null) : [];
-                        let rsVal = 0;
-                        if (validCloses.length >= 2) {
-                            let recentReturn = (validCloses[validCloses.length - 1] - validCloses[0]) / validCloses[0];
-                            rsVal = parseFloat((recentReturn * 3.5).toFixed(2));
-                        } else {
-                            rsVal = parseFloat((pctChange * 0.1).toFixed(2));
-                        }
-
-                        stockQuoteCache[ticker] = { cmp, pctChange, rsVal };
-                    } else {
-                        throw new Error();
-                    }
-                } catch (e) {
+                if (!stockQuoteCache[ticker]) {
                     let seed = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                    let fallbackPrice = 200 + (seed % 600) + ((seed % 10) * 0.5);
-                    let fallbackPct = parseFloat((Math.sin(seed) * 2.2).toFixed(2));
-                    let fallbackRs = parseFloat((fallbackPct * 0.15).toFixed(2));
-                    stockQuoteCache[ticker] = { cmp: fallbackPrice, pctChange: fallbackPct, rsVal: fallbackRs };
+                    let cmp = 100 + (seed % 800) + ((seed % 10) * 0.25);
+                    let pctChange = parseFloat((Math.sin(seed) * 2.5).toFixed(2));
+                    let rsVal = parseFloat((pctChange * 0.15).toFixed(2));
+                    stockQuoteCache[ticker] = { cmp, pctChange, rsVal };
                 }
-            }
-            renderCard2Screener();
+            });
         }
 
         function renderWatchlistsManager() {
@@ -706,7 +633,7 @@
                     <div class="wl-row">
                         <div class="wl-reorder-group">
                             <button class="sort-btn" ${isFirst ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, -1)">⬆️</button>
-                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️️</button>
+                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️</button>
                         </div>
                         <input type="text" class="wl-name-field" value="${wl.name}" ${isAllStocksLocked ? 'readonly style="background:rgba(255,255,255,0.04);"' : ''} oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
                         <div class="wl-count-badge">${wl.stocks.length} stk</div>
@@ -722,7 +649,7 @@
             activeWatchlistIndex = idx;
             localStorage.setItem('maya_active_wl_idx', idx);
             renderWatchlistsManager();
-            fetchLiveMarketQuotes();
+            renderCard2Screener();
         }
 
         function updateWatchlistName(idx, newName) {
@@ -744,7 +671,7 @@
             localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
             localStorage.setItem('maya_active_wl_idx', activeWatchlistIndex);
             renderWatchlistsManager();
-            fetchLiveMarketQuotes();
+            renderCard2Screener();
         }
 
         function renderCard2Screener() {
@@ -757,6 +684,8 @@
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--muted); padding: 30px;">Watchlist is empty. Click edit (✏) on Card 1 to add stocks.</td></tr>`;
                 return;
             }
+
+            generateQuickQuotes();
 
             let html = "";
             activeWL.stocks.forEach((stock) => {
@@ -945,56 +874,9 @@
                 watchlists[editingWatchlistIndex].stocks = [...editingStocksTemp];
                 localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
                 renderWatchlistsManager();
-                fetchLiveMarketQuotes();
+                renderCard2Screener();
             }
             closeEditModal();
-        }
-
-        async function saveWatchlistsToLocalFolder() {
-            localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
-            const dataStr = JSON.stringify(watchlists, null, 2);
-
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: 'Watchlists_Backup.json',
-                        types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(dataStr);
-                    await writable.close();
-                    alert("Watchlists successfully saved!");
-                    return;
-                } catch (err) {
-                    if (err.name === 'AbortError') return;
-                }
-            }
-
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "Watchlists_Data.json";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-        }
-
-        function exportWatchlistsCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,WatchlistName,StockName,Ticker\r\n";
-            watchlists.forEach(wl => {
-                wl.stocks.forEach(s => {
-                    csvContent += `"${wl.name}","${s.name}","${s.ticker}"\r\n`;
-                });
-            });
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "Watchlists_Data.csv");
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -1004,7 +886,7 @@
             setInterval(() => {
                 if (countdown <= 0) {
                     countdown = 1;
-                    fetchLiveMarketQuotes();
+                    renderCard2Screener();
                 } else {
                     countdown--;
                 }
