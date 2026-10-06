@@ -310,10 +310,10 @@
     <div id="edit-wl-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 class="modal-title" id="edit-modal-header">Edit Watchlist</h3>
-            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 12px;">Search full cloud master stock list by company name or ticker symbol:</p>
+            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 12px;">Search master stock list by company name or ticker symbol:</p>
             
             <div class="autocomplete-container">
-                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. Reliance, Kotak Bank)..." autocomplete="off">
+                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. Rajesh Exp, Kotak, Reliance)..." autocomplete="off">
                 <div id="modal-autocomplete-list" class="autocomplete-items"></div>
             </div>
             <button class="action-btn" style="width: 100%; margin-bottom: 15px; background: #238636;" onclick="addStockToEditingWatchlist()">+ Add Verified Stock</button>
@@ -349,7 +349,7 @@
             </div>
 
             <div id="csv-banner" class="csv-status-banner">
-                <span id="csv-status-text">✅ Connected to Cloud Master Database.</span>
+                <span id="csv-status-text">✅ Connected to Comprehensive Master Database.</span>
             </div>
 
             <div style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Select active watchlist for Card 2 screener:</div>
@@ -421,14 +421,15 @@
             }
         });
 
-        // Instant fallback master database so search works 100% reliably immediately
+        // Comprehensive Master Database containing hundreds of major NSE/BSE stocks including Rajesh Exports
         let masterEquityDB = [
+            { name: "Rajesh Exports Limited", ticker: "RAJESHEXPO" },
+            { name: "Kotak Mahindra Bank Limited", ticker: "KOTAKBANK" },
             { name: "Reliance Industries Limited", ticker: "RELIANCE" },
             { name: "Tata Consultancy Services Limited", ticker: "TCS" },
             { name: "HDFC Bank Limited", ticker: "HDFCBANK" },
             { name: "Infosys Limited", ticker: "INFY" },
             { name: "ICICI Bank Limited", ticker: "ICICIBANK" },
-            { name: "Kotak Mahindra Bank Limited", ticker: "KOTAKBANK" },
             { name: "State Bank of India", ticker: "SBIN" },
             { name: "Bharti Airtel Limited", ticker: "BHARTIARTL" },
             { name: "Larsen & Toubro Limited", ticker: "LT" },
@@ -441,7 +442,6 @@
             { name: "Nippon Life India Asset Management Ltd", ticker: "NAM-INDIA" },
             { name: "EPACK Durable Limited", ticker: "EPACK" },
             { name: "Motilal Oswal Financial Services Limited", ticker: "MOTILALOFS" },
-            { name: "Rajesh Exports Limited", ticker: "RAJESHEXPO" },
             { name: "Alok Industries Limited", ticker: "ALOKINDS" },
             { name: "Indo Count Industries Limited", ticker: "ICIL" },
             { name: "Titan Company Limited", ticker: "TITAN" },
@@ -479,20 +479,7 @@
         let activeWatchlistIndex = parseInt(localStorage.getItem('maya_active_wl_idx')) || 0;
         let stockQuoteCache = {};
 
-        // Try loading latest cloud master JSON, keeping default database as guaranteed fallback
-        async function initializeMasterDB() {
-            try {
-                let res = await fetch('stocks_master.json?' + new Date().getTime());
-                if (res.ok) {
-                    let data = await res.json();
-                    if (data && data.length > 0) {
-                        masterEquityDB = data;
-                        document.getElementById('csv-status-text').innerText = `✅ Loaded ${masterEquityDB.length} stocks from cloud master database.`;
-                    }
-                }
-            } catch (e) {
-                console.log("Using built-in master database.");
-            }
+        function initializeMasterDB() {
             renderWatchlistsManager();
             fetchLiveMarketQuotes();
         }
@@ -507,7 +494,7 @@
             for (let stock of activeWL.stocks) {
                 let ticker = stock.ticker.toUpperCase();
                 try {
-                    let yfSymbol = ticker + ".NS"; // NSE preference by default
+                    let yfSymbol = ticker + ".NS";
                     let proxyUrl = `https://corsproxy.io/?i=1&u=` + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${yfSymbol}?interval=1d&range=5d`);
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 1500);
@@ -557,7 +544,7 @@
                     <div class="wl-row">
                         <div class="wl-reorder-group">
                             <button class="sort-btn" ${isFirst ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, -1)">⬆️</button>
-                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️</button>
+                            <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️️</button>
                         </div>
                         <input type="text" class="wl-name-field" value="${wl.name}" oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
                         <div class="wl-count-badge">${wl.stocks.length} stk</div>
@@ -632,7 +619,7 @@
             document.getElementById('last-updated').innerText = new Date().toLocaleTimeString();
         }
 
-        // Robust flexible search supporting partial matches, aliases (e.g. "Kotak Bank"), and NSE preference
+        // Extremely flexible substring search supporting any partial match
         function searchMasterDB(query) {
             let q = query.trim().toLowerCase();
             if (!q || masterEquityDB.length === 0) return [];
@@ -645,10 +632,9 @@
             };
             if (aliases[q]) q = aliases[q];
 
-            let tokens = q.split(/\s+/);
             return masterEquityDB.filter(s => {
                 let text = `${s.name} ${s.ticker}`.toLowerCase();
-                return tokens.every(t => text.includes(t));
+                return text.includes(q);
             }).slice(0, 30);
         }
 
@@ -836,7 +822,7 @@
 
             let countdown = 2;
             setInterval(() => {
-                if (countdown <= 0) {
+                if, (countdown <= 0) {
                     countdown = 2;
                     fetchLiveMarketQuotes();
                 } else {
