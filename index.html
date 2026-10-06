@@ -224,6 +224,10 @@
 
         .bold-green { color: var(--green); font-weight: bold; }
         .bold-red { color: var(--red); font-weight: bold; }
+        .exchange-tag { font-size: 0.72em; padding: 2px 5px; border-radius: 4px; font-weight: bold; margin-left: 6px; display: inline-block; }
+        .tag-nse { background: rgba(88,166,255,0.15); color: var(--blue); border: 1px solid var(--border); }
+        .tag-bse { background: rgba(210,153,34,0.15); color: var(--yellow); border: 1px solid var(--border); }
+        .tag-both { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid var(--border); }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -307,16 +311,27 @@
 </head>
 <body>
 
+    <!-- EDIT WATCHLIST MODAL -->
     <div id="edit-wl-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 class="modal-title" id="edit-modal-header">Edit Watchlist</h3>
-            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 12px;">Search master stock list by company name or ticker symbol:</p>
+            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Search master stock list by company name or ticker symbol:</p>
             
             <div class="autocomplete-container">
-                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. HPCL, Rajesh Exp, Kotak)..." autocomplete="off">
+                <input type="text" id="modal-stock-search" class="search-box" placeholder="Type stock name or ticker (e.g. Reliance, Kotak)..." autocomplete="off">
                 <div id="modal-autocomplete-list" class="autocomplete-items"></div>
             </div>
-            <button class="action-btn" style="width: 100%; margin-bottom: 15px; background: #238636;" onclick="addStockToEditingWatchlist()">+ Add Verified Stock</button>
+            <button class="action-btn" style="width: 100%; margin-bottom: 12px; background: #238636;" onclick="addStockToEditingWatchlist()">+ Add Selected Stock</button>
+
+            <!-- CUSTOM MANUAL ADDITION -->
+            <div style="background: var(--bg); border: 1px solid var(--border); padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                <p style="font-size: 0.78em; color: var(--muted); margin: 0 0 6px 0; font-weight: bold;">Add custom stock manually:</p>
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="custom-stock-name" class="search-box" placeholder="Company Name" style="flex: 2; padding: 7px 10px; font-size: 0.85em;">
+                    <input type="text" id="custom-stock-ticker" class="search-box" placeholder="Ticker" style="flex: 1; padding: 7px 10px; font-size: 0.85em; text-transform: uppercase;">
+                    <button class="action-btn" style="background: #1f6feb; padding: 7px 12px; font-size: 0.85em; flex: 0.8;" onclick="addCustomStockManually()">+ Add</button>
+                </div>
+            </div>
 
             <div class="modal-toolbar">
                 <span style="font-size: 0.85em; color: var(--muted); font-weight: bold;">Stocks in Watchlist:</span>
@@ -326,11 +341,36 @@
                 </div>
             </div>
 
-            <div id="modal-stocks-list" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 15px; background: var(--bg);"></div>
+            <div id="modal-stocks-list" style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 6px; margin-bottom: 15px; background: var(--bg);"></div>
 
             <div style="display: flex; gap: 10px;">
                 <button class="action-btn" style="background: #238636;" onclick="saveEditWatchlistChanges()">Save Changes</button>
                 <button class="action-btn" style="background: #21262d; border: 1px solid var(--border);" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MASTER STOCK LIST UPLOAD DIALOG MODAL -->
+    <div id="master-list-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="modal-title">Master Stock List Upload</h3>
+            <p style="font-size: 0.85em; color: var(--muted); margin-bottom: 15px;">Upload official CSV lists for NSE and BSE to update the unified master database.</p>
+            
+            <div style="margin-bottom: 15px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+                <label style="display: block; font-size: 0.85em; font-weight: bold; color: var(--strong-text); margin-bottom: 5px;">(1) Upload NSE Listed Stocks CSV:</label>
+                <input type="file" id="nse-file-upload" accept=".csv" style="font-size: 0.85em; color: var(--text);">
+            </div>
+
+            <div style="margin-bottom: 15px; background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+                <label style="display: block; font-size: 0.85em; font-weight: bold; color: var(--strong-text); margin-bottom: 5px;">(2) Upload BSE Listed Stocks CSV:</label>
+                <input type="file" id="bse-file-upload" accept=".csv" style="font-size: 0.85em; color: var(--text);">
+            </div>
+
+            <div id="upload-timestamp-display" style="font-size: 0.82em; color: var(--blue); margin-bottom: 15px; font-weight: bold;">Last Uploaded: Never</div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="action-btn" style="background: #238636;" onclick="processMasterStockFiles()">Save & Process Master Lists</button>
+                <button class="action-btn" style="background: #21262d; border: 1px solid var(--border);" onclick="closeMasterListModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -349,7 +389,8 @@
             </div>
 
             <div id="csv-banner" class="csv-status-banner">
-                <span id="csv-status-text">✅ Connected to Comprehensive Master Database.</span>
+                <span id="csv-status-text">✅ Master Database Active.</span>
+                <button class="action-btn" style="background: var(--blue); padding: 4px 8px; font-size: 0.75em; flex: unset;" onclick="openMasterListModal()">Master Stock List</button>
             </div>
 
             <div style="font-size: 0.85em; color: var(--muted); margin-bottom: 8px;">Select active watchlist for Card 2 screener:</div>
@@ -364,7 +405,7 @@
 
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">2. Stock Screener & RS (<span id="active-wl-title">Watchlist 1</span>)</h2>
+                <h2 class="card-title">2. Stock Screener & RS (<span id="active-wl-title">All Stocks</span>)</h2>
                 <span style="font-size: 0.78em; color: var(--blue); font-weight: bold;" id="active-wl-count">0 stocks</span>
             </div>
 
@@ -403,7 +444,7 @@
     </div>
 
     <footer>
-        Last Price Stream: <strong id="last-updated">--</strong> | Next real-time tick in: <strong id="next-update" style="color: var(--blue);">2</strong> seconds<br>
+        Last Price Stream: <strong id="last-updated">--</strong> | Next real-time tick in: <strong id="next-update" style="color: var(--blue);">1</strong> second<br>
         <i>Cloud automated multi-watchlist live streaming active.</i>
         <span class="author">Created by MaYa</span>
     </footer>
@@ -417,66 +458,48 @@
                 themeBtn.innerText = '🌙 Dark Mode';
             } else {
                 htmlTag.setAttribute('data-theme', 'dark');
-                themeBtn.innerText = '☀️ Light Mode';
+                themeBtn.innerText = '☀️️ Light Mode';
             }
         });
 
-        // Expanded comprehensive master database including HPCL, BPCL, IOC, Rajesh Exports, and major equities
+        // Default robust fallback master database with exchange tags ('NSE', 'BSE', 'Both')
         let masterEquityDB = [
-            { name: "Hindustan Petroleum Corporation Limited", ticker: "HPCL" },
-            { name: "Bharat Petroleum Corporation Limited", ticker: "BPCL" },
-            { name: "Indian Oil Corporation Limited", ticker: "IOC" },
-            { name: "Rajesh Exports Limited", ticker: "RAJESHEXPO" },
-            { name: "Kotak Mahindra Bank Limited", ticker: "KOTAKBANK" },
-            { name: "Reliance Industries Limited", ticker: "RELIANCE" },
-            { name: "Tata Consultancy Services Limited", ticker: "TCS" },
-            { name: "HDFC Bank Limited", ticker: "HDFCBANK" },
-            { name: "Infosys Limited", ticker: "INFY" },
-            { name: "ICICI Bank Limited", ticker: "ICICIBANK" },
-            { name: "State Bank of India", ticker: "SBIN" },
-            { name: "Bharti Airtel Limited", ticker: "BHARTIARTL" },
-            { name: "Larsen & Toubro Limited", ticker: "LT" },
-            { name: "ITC Limited", ticker: "ITC" },
-            { name: "Axis Bank Limited", ticker: "AXISBANK" },
-            { name: "Aditya Birla Capital Limited", ticker: "ABCAPITAL" },
-            { name: "Carysil Limited", ticker: "CARYSIL" },
-            { name: "Hindustan Foods Limited", ticker: "HINDFDTS" },
-            { name: "Supreme Petrochem Limited", ticker: "SLPETRO" },
-            { name: "Nippon Life India Asset Management Ltd", ticker: "NAM-INDIA" },
-            { name: "EPACK Durable Limited", ticker: "EPACK" },
-            { name: "Motilal Oswal Financial Services Limited", ticker: "MOTILALOFS" },
-            { name: "Alok Industries Limited", ticker: "ALOKINDS" },
-            { name: "Indo Count Industries Limited", ticker: "ICIL" },
-            { name: "Titan Company Limited", ticker: "TITAN" },
-            { name: "Usha Martin Limited", ticker: "USHAMART" },
-            { name: "S. P. Apparels Limited", ticker: "SPAL" },
-            { name: "Privi Speciality Chemicals Limited", ticker: "PRIVISCL" },
-            { name: "Jayaswal Neco Industries Limited", ticker: "JAYNECOIND" },
-            { name: "HCL Technologies Limited", ticker: "HCLTECH" },
-            { name: "Tata Motors Limited", ticker: "TATAMOTORS" },
-            { name: "Sun Pharmaceutical Industries Limited", ticker: "SUNPHARMA" },
-            { name: "NTPC Limited", ticker: "NTPC" },
-            { name: "Bajaj Finance Limited", ticker: "BAJFINANCE" },
-            { name: "Power Grid Corporation of India Limited", ticker: "POWERGRID" },
-            { name: "Tata Steel Limited", ticker: "TATASTEEL" },
-            { name: "JSW Steel Limited", ticker: "JSWSTEEL" },
-            { name: "Adani Enterprises Limited", ticker: "ADANIENT" },
-            { name: "Adani Ports and Special Economic Zone Limited", ticker: "ADANIPORTS" },
-            { name: "Hindalco Industries Limited", ticker: "HINDALCO" },
-            { name: "Grasim Industries Limited", ticker: "GRASIM" },
-            { name: "Tech Mahindra Limited", ticker: "TECHM" },
-            { name: "Wipro Limited", ticker: "WIPRO" },
-            { name: "Bajaj Finserv Limited", ticker: "BAJAJFINSV" },
-            { name: "Asian Paints Limited", ticker: "ASIANPAINT" },
-            { name: "Maruti Suzuki India Limited", ticker: "MARUTI" },
-            { name: "Mahindra & Mahindra Limited", ticker: "M&M" },
-            { name: "Nestle India Limited", ticker: "NESTLEIND" }
+            { name: "Reliance Industries Limited", ticker: "RELIANCE", exchange: "Both" },
+            { name: "Tata Consultancy Services Limited", ticker: "TCS", exchange: "Both" },
+            { name: "HDFC Bank Limited", ticker: "HDFCBANK", exchange: "Both" },
+            { name: "Infosys Limited", ticker: "INFY", exchange: "Both" },
+            { name: "ICICI Bank Limited", ticker: "ICICIBANK", exchange: "Both" },
+            { name: "Kotak Mahindra Bank Limited", ticker: "KOTAKBANK", exchange: "Both" },
+            { name: "State Bank of India", ticker: "SBIN", exchange: "Both" },
+            { name: "Bharti Airtel Limited", ticker: "BHARTIARTL", exchange: "Both" },
+            { name: "Larsen & Toubro Limited", ticker: "LT", exchange: "Both" },
+            { name: "ITC Limited", ticker: "ITC", exchange: "Both" },
+            { name: "Axis Bank Limited", ticker: "AXISBANK", exchange: "Both" },
+            { name: "Rajesh Exports Limited", ticker: "RAJESHEXPO", exchange: "Both" },
+            { name: "Hindustan Petroleum Corporation Limited", ticker: "HPCL", exchange: "Both" }
         ];
 
+        // Load custom uploaded master database from localStorage if available
+        let savedMaster = localStorage.getItem('maya_master_equity_db');
+        if (savedMaster) {
+            try { masterEquityDB = JSON.parse(savedMaster); } catch(e){}
+        }
+
+        let uploadTimestamp = localStorage.getItem('maya_master_upload_timestamp') || "Never";
+
+        // Watchlists setup: Watchlist 0 is permanently "All Stocks"
         let storedWl = JSON.parse(localStorage.getItem('maya_watchlists_card1'));
         let watchlists = storedWl && storedWl.length > 0 ? storedWl : [];
-        while(watchlists.length < 10) {
-            watchlists.push({ name: `Watchlist ${watchlists.length + 1}`, stocks: [] });
+        
+        // Ensure Watchlist 0 is always "All Stocks"
+        let allStocksList = masterEquityDB.map(s => ({ name: s.name, ticker: s.ticker }));
+        if (watchlists.length === 0) {
+            watchlists.push({ name: "All Stocks", stocks: allStocksList });
+            for (let i = 1; i < 10; i++) {
+                watchlists.push({ name: `Watchlist ${i + 1}`, stocks: [] });
+            }
+        } else {
+            watchlists[0] = { name: "All Stocks", stocks: allStocksList };
         }
 
         let activeWatchlistIndex = parseInt(localStorage.getItem('maya_active_wl_idx')) || 0;
@@ -485,6 +508,114 @@
         function initializeMasterDB() {
             renderWatchlistsManager();
             fetchLiveMarketQuotes();
+        }
+
+        // Master List Modal Controls
+        function openMasterListModal() {
+            document.getElementById('upload-timestamp-display').innerText = `Last Uploaded: ${uploadTimestamp}`;
+            document.getElementById('master-list-modal').style.display = 'flex';
+        }
+
+        function closeMasterListModal() {
+            document.getElementById('master-list-modal').style.display = 'none';
+        }
+
+        function processMasterStockFiles() {
+            const nseInput = document.getElementById('nse-file-upload');
+            const bseInput = document.getElementById('bse-file-upload');
+
+            let nseStocks = [];
+            let bseStocks = [];
+
+            let filesProcessed = 0;
+            let totalFiles = (nseInput.files.length > 0 ? 1 : 0) + (bseInput.files.length > 0 ? 1 : 0);
+
+            if (totalFiles === 0) {
+                alert("Please select at least one CSV file (NSE or BSE).");
+                return;
+            }
+
+            function finalizeProcessing() {
+                let mergedMap = {};
+
+                nseStocks.forEach(s => {
+                    mergedMap[s.ticker] = { name: s.name, ticker: s.ticker, exchange: 'NSE' };
+                });
+
+                bseStocks.forEach(s => {
+                    if (mergedMap[s.ticker]) {
+                        mergedMap[s.ticker].exchange = 'Both';
+                    } else {
+                        mergedMap[s.ticker] = { name: s.name, ticker: s.ticker, exchange: 'BSE' };
+                    }
+                });
+
+                let newMasterList = Object.values(mergedMap);
+                if (newMasterList.length > 0) {
+                    masterEquityDB = newMasterList;
+                    localStorage.setItem('maya_master_equity_db', JSON.stringify(masterEquityDB));
+                    
+                    uploadTimestamp = new Date().toLocaleString();
+                    localStorage.setItem('maya_master_upload_timestamp', uploadTimestamp);
+
+                    // Update All Stocks Watchlist
+                    watchlists[0] = { name: "All Stocks", stocks: masterEquityDB.map(s => ({ name: s.name, ticker: s.ticker })) };
+                    localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
+
+                    alert(`Successfully merged ${masterEquityDB.length} stocks into master database!`);
+                    closeMasterListModal();
+                    renderWatchlistsManager();
+                    fetchLiveMarketQuotes();
+                } else {
+                    alert("Could not parse stocks from uploaded files. Please check CSV format.");
+                }
+            }
+
+            if (nseInput.files.length > 0) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    nseStocks = parseCSVToStocks(e.target.result);
+                    filesProcessed++;
+                    if (filesProcessed === totalFiles) finalizeProcessing();
+                };
+                reader.readAsText(nseInput.files[0]);
+            }
+
+            if (bseInput.files.length > 0) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    bseStocks = parseCSVToStocks(e.target.result);
+                    filesProcessed++;
+                    if (filesProcessed === totalFiles) finalizeProcessing();
+                };
+                reader.readAsText(bseInput.files[0]);
+            }
+        }
+
+        function parseCSVToStocks(csvText) {
+            let lines = csvText.split('\n');
+            let list = [];
+            for (let i = 1; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+                let row = [];
+                let inQuotes = false;
+                let entry = "";
+                for (let char of line) {
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) { row.push(entry.trim()); entry = ""; }
+                    else entry += char;
+                }
+                row.push(entry.trim());
+                if (row.length >= 2 && row[0] && row[1]) {
+                    let symbol = row[0].replace(/^"|"$/g, '').trim().toUpperCase();
+                    let name = row[1].replace(/^"|"$/g, '').trim();
+                    if (symbol && symbol !== "SYMBOL" && symbol !== "SECURITY CODE" && name) {
+                        list.push({ name: name, ticker: symbol });
+                    }
+                }
+            }
+            return list;
         }
 
         async function fetchLiveMarketQuotes() {
@@ -500,7 +631,7 @@
                     let yfSymbol = ticker + ".NS";
                     let proxyUrl = `https://corsproxy.io/?i=1&u=` + encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${yfSymbol}?interval=1d&range=5d`);
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 1500);
+                    const timeoutId = setTimeout(() => controller.abort(), 1200);
                     let res = await fetch(proxyUrl, { signal: controller.signal });
                     clearTimeout(timeoutId);
 
@@ -537,22 +668,26 @@
         }
 
         function renderWatchlistsManager() {
+            // Keep All Stocks updated
+            watchlists[0] = { name: "All Stocks", stocks: masterEquityDB.map(s => ({ name: s.name, ticker: s.ticker })) };
+            
             const container = document.getElementById('watchlist-rows');
             let html = "";
             watchlists.forEach((wl, idx) => {
                 let isFirst = idx === 0;
                 let isLast = idx === watchlists.length - 1;
                 let isActive = idx === activeWatchlistIndex ? 'active-wl' : '';
+                let isAllStocksLocked = idx === 0;
                 html += `
                     <div class="wl-row">
                         <div class="wl-reorder-group">
                             <button class="sort-btn" ${isFirst ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, -1)">⬆️</button>
                             <button class="sort-btn" ${isLast ? 'disabled style="opacity:0.3; cursor:default;"' : ''} onclick="moveWatchlistOrder(${idx}, 1)">⬇️</button>
                         </div>
-                        <input type="text" class="wl-name-field" value="${wl.name}" oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
+                        <input type="text" class="wl-name-field" value="${wl.name}" ${isAllStocksLocked ? 'readonly style="background:rgba(255,255,255,0.04);"' : ''} oninput="updateWatchlistName(${idx}, this.value)" placeholder="Watchlist Name">
                         <div class="wl-count-badge">${wl.stocks.length} stk</div>
                         <button class="edit-wl-btn ${isActive}" onclick="setActiveWatchlist(${idx})">Select</button>
-                        <button class="sort-btn" onclick="openEditWatchlistModal(${idx})" title="Edit Stocks">✏️</button>
+                        <button class="sort-btn" onclick="openEditWatchlistModal(${idx})" title="Edit Stocks" ${isAllStocksLocked ? 'disabled style="opacity:0.3; cursor:default;"' : ''}>✏️</button>
                     </div>
                 `;
             });
@@ -567,12 +702,14 @@
         }
 
         function updateWatchlistName(idx, newName) {
+            if (idx === 0) return; // All Stocks locked
             watchlists[idx].name = newName;
             localStorage.setItem('maya_watchlists_card1', JSON.stringify(watchlists));
             if (idx === activeWatchlistIndex) document.getElementById('active-wl-title').innerText = newName;
         }
 
         function moveWatchlistOrder(idx, direction) {
+            if (idx === 0 || idx + direction === 0) return; // Keep All Stocks locked at top
             let newIdx = idx + direction;
             if (newIdx < 0 || newIdx >= watchlists.length) return;
             let temp = watchlists[idx];
@@ -602,6 +739,11 @@
                 let ticker = stock.ticker.toUpperCase();
                 let quote = stockQuoteCache[ticker] || { cmp: 100.0, pctChange: 1.0, rsVal: 0.1 };
 
+                // Find exchange tag if available
+                let masterMatch = masterEquityDB.find(m => m.ticker === ticker);
+                let exch = masterMatch ? masterMatch.exchange : 'NSE';
+                let tagClass = exch === 'NSE' ? 'tag-nse' : (exch === 'BSE' ? 'tag-bse' : 'tag-both');
+
                 let pctColor = quote.pctChange >= 0 ? 'bold-green' : 'bold-red';
                 let nameTickerStyle = quote.rsVal >= 0 ? 'bold-green' : 'bold-red';
 
@@ -610,6 +752,7 @@
                         <td>
                             <span class="${nameTickerStyle}">${stock.name}</span> 
                             <span style="font-family: monospace; font-size: 0.8em; opacity: 0.8;">(${stock.ticker})</span>
+                            <span class="exchange-tag ${tagClass}">${exch}</span>
                         </td>
                         <td style="text-align: right; font-family: monospace;" class="bold-green">₹${quote.cmp.toFixed(2)}</td>
                         <td style="text-align: right; font-family: monospace;" class="${pctColor}">${quote.pctChange >= 0 ? '+' : ''}${quote.pctChange.toFixed(2)}%</td>
@@ -622,21 +765,11 @@
             document.getElementById('last-updated').innerText = new Date().toLocaleTimeString();
         }
 
-        // Flexible substring search
         function searchMasterDB(query) {
             let q = query.trim().toLowerCase();
             if (!q || masterEquityDB.length === 0) return [];
-            
-            let aliases = {
-                "kotak bank": "kotak mahindra",
-                "sbi": "state bank of india",
-                "ril": "reliance",
-                "tcs": "tata consultancy"
-            };
-            if (aliases[q]) q = aliases[q];
-
             return masterEquityDB.filter(s => {
-                let text = `${s.name}${s.ticker}`.toLowerCase();
+                let text = `${s.name} ${s.ticker}`.toLowerCase();
                 return text.includes(q);
             }).slice(0, 30);
         }
@@ -656,13 +789,13 @@
 
             let matches = searchMasterDB(val);
             if (matches.length === 0) {
-                modalAutoList.innerHTML = `<div style="color: var(--red);">No matching stock found. Try searching by ticker or keyword.</div>`;
+                modalAutoList.innerHTML = `<div style="color: var(--muted); padding: 8px;">Not found in master list. Use custom adder below!</div>`;
                 return;
             }
 
             matches.forEach(m => {
                 let div = document.createElement('div');
-                div.innerHTML = `<strong>${m.name}</strong> <span style="color:var(--blue); font-family:monospace;">(${m.ticker})</span>`;
+                div.innerHTML = `<strong>${m.name}</strong> <span style="color:var(--blue); font-family:monospace;">(${m.ticker})</span> <span style="font-size:0.75em; color:var(--muted);">[${m.exchange}]</span>`;
                 div.addEventListener('click', () => {
                     modalAutoInput.value = `${m.name} (${m.ticker})`;
                     selectedModalStock = m;
@@ -676,12 +809,33 @@
             if (e.target !== modalAutoInput) modalAutoList.innerHTML = "";
         });
 
+        function addCustomStockManually() {
+            let nameInput = document.getElementById('custom-stock-name').value.trim();
+            let tickerInput = document.getElementById('custom-stock-ticker').value.trim().toUpperCase();
+            if (!nameInput || !tickerInput) {
+                alert("Please enter both Company Name and Ticker symbol.");
+                return;
+            }
+            if (editingStocksTemp.some(s => s.ticker === tickerInput)) {
+                alert("This stock is already in the watchlist.");
+                return;
+            }
+            let customStock = { name: nameInput, ticker: tickerInput };
+            editingStocksTemp.push(customStock);
+            document.getElementById('custom-stock-name').value = "";
+            document.getElementById('custom-stock-ticker').value = "";
+            renderEditingStocksList();
+        }
+
         function openEditWatchlistModal(idx) {
+            if (idx === 0) return; // All Stocks cannot be edited manually
             editingWatchlistIndex = idx;
             editingStocksTemp = JSON.parse(JSON.stringify(watchlists[idx].stocks));
             document.getElementById('edit-modal-header').innerText = `Edit Stocks: ${watchlists[idx].name}`;
             modalAutoInput.value = "";
             modalAutoList.innerHTML = "";
+            document.getElementById('custom-stock-name').value = "";
+            document.getElementById('custom-stock-ticker').value = "";
             renderEditingStocksList();
             document.getElementById('edit-wl-modal').style.display = 'flex';
         }
@@ -695,7 +849,7 @@
         function renderEditingStocksList() {
             const container = document.getElementById('modal-stocks-list');
             if (editingStocksTemp.length === 0) {
-                container.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 10px; font-size: 0.85em;">Watchlist is empty. Search above to add stocks.</div>`;
+                container.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 10px; font-size: 0.85em;">Watchlist is empty. Search above or add custom stock.</div>`;
                 return;
             }
             let html = "";
@@ -724,7 +878,7 @@
             if (!stockToAdd) {
                 let matches = searchMasterDB(val);
                 if (matches.length > 0) stockToAdd = matches[0];
-                else { alert("Please select a verified stock from dropdown search results."); return; }
+                else { alert("Please select a verified stock or use custom adder."); return; }
             }
 
             if (editingStocksTemp.some(s => s.ticker === stockToAdd.ticker)) {
@@ -732,7 +886,7 @@
                 return;
             }
 
-            editingStocksTemp.push(stockToAdd);
+            editingStocksTemp.push({ name: stockToAdd.name, ticker: stockToAdd.ticker });
             modalAutoInput.value = "";
             selectedModalStock = null;
             modalAutoList.innerHTML = "";
@@ -797,11 +951,44 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = "Watchlists_Data.csv";
+            a.download = "Watchlists_Data.json";
             document.body.appendChild(a);
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
         }
 
-        function exportWatchlistsCSV`(); // wait, ensure no syntax error in exportWatchlistsCSV
+        function exportWatchlistsCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,WatchlistName,StockName,Ticker\r\n";
+            watchlists.forEach(wl => {
+                wl.stocks.forEach(s => {
+                    csvContent += `"${wl.name}","${s.name}","${s.ticker}"\r\n`;
+                });
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Watchlists_Data.csv");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeMasterDB();
+
+            // 1-second live countdown and price refresh loop
+            let countdown = 1;
+            setInterval(() => {
+                if (countdown <= 0) {
+                    countdown = 1;
+                    fetchLiveMarketQuotes();
+                } else {
+                    countdown--;
+                }
+                document.getElementById('next-update').innerText = countdown;
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
